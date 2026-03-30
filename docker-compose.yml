@@ -1,0 +1,32 @@
+services:
+  # ── tests ──────────────────────────────────────────────────────────────────
+  # Runs the full Maven test suite in headless Chrome, then generates the
+  # Allure HTML report into the shared `allure-report` volume.
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: selenium-docker-tests
+    volumes:
+      # Persist raw results and the generated report outside the container
+      - allure-results:/app/target/allure-results
+      - allure-report:/allure-report
+
+  # ── allure-serve ───────────────────────────────────────────────────────────
+  # Serves the generated Allure HTML report on http://localhost:4040
+  # after the tests container finishes writing the report.
+  allure-serve:
+    image: nginx:alpine
+    container_name: selenium-allure-serve
+    depends_on:
+      tests:
+        condition: service_completed_successfully
+    ports:
+      - "4040:80"
+    volumes:
+      # Mount the generated report as nginx's web root
+      - allure-report:/usr/share/nginx/html:ro
+
+volumes:
+  allure-results:
+  allure-report:
