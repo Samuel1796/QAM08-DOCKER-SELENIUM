@@ -205,9 +205,9 @@ jobs:
           status_text = "PASSED" if passed else "ATTENTION"
           status_emoji = ":white_check_mark:" if passed else ":warning:"
 
-          # @method Build a richer Slack Block Kit payload: header, status, metadata fields, and action buttons.
+          # @method Build a richer Slack Block Kit payload: header, status, report-link section, metadata fields, and action buttons.
           payload = {
-              "text": f"Allure Report Notification - {status_text}. Report: {report_url}",
+              "text": f"Allure Report Notification - {status_text}. GitHub Pages report: {report_url}",
               "blocks": [
                   {
                       "type": "header",
@@ -223,6 +223,16 @@ jobs:
                           "type": "mrkdwn",
                           "text": f"{status_emoji} *Allure Report Status:* *{status_text}*",
                       },
+                  },
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": f"*GitHub Pages Report:*\n<{report_url}|Open Allure Report>",
+                      },
+                  },
+                  {
+                      "type": "divider",
                   },
                   {
                       "type": "section",
