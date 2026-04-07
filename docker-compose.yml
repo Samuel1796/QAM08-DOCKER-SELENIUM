@@ -1,20 +1,27 @@
 services:
-  # ── tests ──────────────────────────────────────────────────────────────────
-  # Runs the full Maven test suite in headless Chrome, then generates the
-  # Allure HTML report into the shared `allure-report` volume.
+  # /**
+  #  * @service tests
+  #  * @purpose Build the Docker image and execute the full Selenium + Maven suite.
+  #  * @logic Persists raw Allure result files and generated HTML report to named volumes.
+  #  * @command docker compose up --build tests
+  #  */
   tests:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: selenium-docker-tests
     volumes:
-      # Persist raw results and the generated report outside the container
+      # @output Raw test artifacts and rendered report survive container exit.
       - allure-results:/app/target/allure-results
       - allure-report:/allure-report
 
-  # ── allure-serve ───────────────────────────────────────────────────────────
-  # Serves the generated Allure HTML report on http://localhost:4040
-  # after the tests container finishes writing the report.
+  # /**
+  #  * @service allure-serve
+  #  * @purpose Serve static Allure HTML via nginx for local review.
+  #  * @dependency Waits until tests service exits successfully.
+  #  * @command docker compose up --build
+  #  * @access http://localhost:4040
+  #  */
   allure-serve:
     image: nginx:alpine
     container_name: selenium-allure-serve
@@ -24,9 +31,12 @@ services:
     ports:
       - "4040:80"
     volumes:
-      # Mount the generated report as nginx's web root
+      # @mount Read-only report volume mounted as nginx web root.
       - allure-report:/usr/share/nginx/html:ro
 
 volumes:
+  # /**
+  #  * @purpose Shared named volumes decouple reports from container lifecycle.
+  #  */
   allure-results:
   allure-report:

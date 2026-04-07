@@ -8,6 +8,11 @@ on:
   workflow_dispatch:
 
 jobs:
+  # /**
+  #  * @job test
+  #  * @purpose Compile and execute UI/API automation tests, then archive artifacts.
+  #  * @command mvn clean compile; mvn test
+  #  */
   test:
     runs-on: ubuntu-latest
     permissions:
@@ -31,6 +36,7 @@ jobs:
         run: mvn test
         continue-on-error: true
 
+      # @output Raw Allure JSON files consumed by the report publishing job.
       - name: Upload Allure Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -39,6 +45,7 @@ jobs:
           path: target/allure-results/
           retention-days: 30
 
+      # @output Surefire XML/TXT reports for failure analysis.
       - name: Upload Surefire Reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,6 +54,12 @@ jobs:
           path: target/surefire-reports/
           retention-days: 30
 
+  # /**
+  #  * @job allure-report
+  #  * @purpose Build and publish static Allure HTML to GitHub Pages with trend history.
+  #  * @dependency needs: test
+  #  * @command mvn allure:report
+  #  */
   allure-report:
     runs-on: ubuntu-latest
     needs: test
@@ -134,6 +147,11 @@ jobs:
           path: allure-report-final/
           retention-days: 30
 
+  # /**
+  #  * @job docker-test
+  #  * @purpose Validate containerized execution path used in local/devops workflows.
+  #  * @commands docker build -t api-test-automation . ; docker run --rm -v $(pwd)/target:/app/target api-test-automation
+  #  */
   docker-test:
     runs-on: ubuntu-latest
 
@@ -156,6 +174,11 @@ jobs:
           path: target/surefire-reports/
           retention-days: 30
 
+  # /**
+  #  * @job notify-slack
+  #  * @purpose Send a report-only Slack Block Kit message after test + report jobs finish.
+  #  * @logic Computes overall status from upstream job results and posts actionable links.
+  #  */
   notify-slack:
     runs-on: ubuntu-latest
     needs: [test, allure-report]
@@ -168,18 +191,21 @@ jobs:
           import json
           import os
 
+          # @logic Build repo and run URLs so Slack buttons link directly to report and workflow run.
           repo = os.environ.get("GITHUB_REPOSITORY", "")
           owner, name = (repo.split("/", 1) + [""])[:2] if "/" in repo else ("", repo)
           branch = os.environ.get("GITHUB_REF_NAME", "")
           run_url = f"{os.environ.get('GITHUB_SERVER_URL')}/{repo}/actions/runs/{os.environ.get('GITHUB_RUN_ID')}"
           report_url = f"https://{owner}.github.io/{name}/" if owner and name else "GitHub Pages URL unavailable"
 
+          # @logic Mark message as PASSED only when both upstream jobs are successful.
           test_result = os.environ.get("TEST_JOB_RESULT", "unknown")
           report_result = os.environ.get("REPORT_JOB_RESULT", "unknown")
           passed = test_result == "success" and report_result == "success"
           status_text = "PASSED" if passed else "ATTENTION"
           status_emoji = ":white_check_mark:" if passed else ":warning:"
 
+          # @method Build a richer Slack Block Kit payload: header, status, metadata fields, and action buttons.
           payload = {
               "text": f"Allure Report Notification - {status_text}. Report: {report_url}",
               "blocks": [
@@ -240,6 +266,7 @@ jobs:
           REPORT_JOB_RESULT: ${{ needs.allure-report.result }}
 
       - name: Notify Slack
+        # @command Uses incoming webhook URL from repository secrets.
         continue-on-error: true
         uses: slackapi/slack-github-action@v1.27.0
         with:
